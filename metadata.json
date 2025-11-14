@@ -1,0 +1,5 @@
+{
+  "name": "AI Workflow System",
+  "description": "An intelligent automation platform that leverages Large Language Models to execute complex, multi-step workflows based on natural language goals. The system interprets user intentions, breaks down objectives into actionable steps, and iteratively refines its approach.",
+  "requestFramePermissions": []
+}
