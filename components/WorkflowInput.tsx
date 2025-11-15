@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { LockIcon, PlayIcon, SpinnerIcon, DocumentArrowUpIcon } from './icons';
+import { LockIcon, PlayIcon, SpinnerIcon, DocumentArrowUpIcon, BookOpenIcon } from './icons';
 
 interface WorkflowInputProps {
     goal: string;
@@ -9,7 +9,9 @@ interface WorkflowInputProps {
     isRunning: boolean;
     isAuthenticated: boolean;
     onRunWorkflow: () => void;
-    onRunWorkflowFromFile: (file: File) => void;
+    onRunWorkflowFromStateFile: (file: File) => void;
+    onUploadKnowledge: (file: File) => void;
+    ragContentProvided: boolean;
     onLoginClick: () => void;
 }
 
@@ -21,19 +23,36 @@ export const WorkflowInput: React.FC<WorkflowInputProps> = ({
     isRunning,
     isAuthenticated,
     onRunWorkflow,
-    onRunWorkflowFromFile,
+    onRunWorkflowFromStateFile,
+    onUploadKnowledge,
+    ragContentProvided,
     onLoginClick,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const knowledgeFileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleStateFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            onRunWorkflowFromFile(file);
+            onRunWorkflowFromStateFile(file);
         }
-        // Reset the input value to allow selecting the same file again
         e.target.value = '';
     };
+    
+    const handleKnowledgeFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            onUploadKnowledge(file);
+        }
+        e.target.value = '';
+    };
+
+    const knowledgeButtonClasses = `w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 font-semibold bg-slate-800/60 border rounded-full shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+        ragContentProvided
+            ? 'border-success text-success hover:bg-success/20'
+            : 'border-border-muted text-text-secondary hover:bg-slate-700/80'
+    }`;
+
 
     return (
         <div className="flex flex-col gap-4">
@@ -93,7 +112,7 @@ export const WorkflowInput: React.FC<WorkflowInputProps> = ({
                 )}
                  {isAuthenticated && (
                     <>
-                        <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".json" className="hidden" />
+                        <input type="file" ref={fileInputRef} onChange={handleStateFileSelect} accept=".json" className="hidden" />
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isRunning}
@@ -102,6 +121,16 @@ export const WorkflowInput: React.FC<WorkflowInputProps> = ({
                         >
                             <DocumentArrowUpIcon className="w-5 h-5" />
                             <span>Run from File</span>
+                        </button>
+                        <input type="file" ref={knowledgeFileInputRef} onChange={handleKnowledgeFileSelect} accept=".txt,.md" className="hidden" />
+                        <button
+                            onClick={() => knowledgeFileInputRef.current?.click()}
+                            disabled={isRunning}
+                            className={knowledgeButtonClasses}
+                            aria-label="Upload a knowledge file for context"
+                        >
+                            <BookOpenIcon className="w-5 h-5" />
+                            <span>{ragContentProvided ? 'Knowledge Loaded' : 'Upload Knowledge'}</span>
                         </button>
                     </>
                 )}

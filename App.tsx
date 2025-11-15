@@ -14,7 +14,7 @@ import { Footer } from './components/Footer';
 
 const DEFAULT_SETTINGS: LLMSettings = {
     provider: 'google',
-    google: { model: 'gemini-2.5-flash' },
+    google: { model: 'gemini-2.5-pro' },
     openai: { apiKey: '', model: 'gpt-4o', baseURL: 'https://api.openai.com/v1' },
     claude: { apiKey: '', model: 'claude-3-opus-20240229', baseURL: 'https://api.anthropic.com/v1' },
     openrouter: { apiKey: '', model: 'openai/gpt-4o', baseURL: 'https://openrouter.ai/api/v1' },
@@ -33,6 +33,7 @@ const App: React.FC = () => {
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
     const [settings, setSettings] = useState<LLMSettings>(DEFAULT_SETTINGS);
+    const [ragContent, setRagContent] = useState<string>('');
 
     useEffect(() => {
         const loadSettings = async () => {
@@ -98,7 +99,7 @@ const App: React.FC = () => {
 
         try {
             for (let i = 1; i <= effectiveMaxIterations; i++) {
-                const newState = await runWorkflowIteration(currentState, settings);
+                const newState = await runWorkflowIteration(currentState, settings, ragContent);
                 
                 currentState = { ...newState, currentIteration: i };
                 setWorkflowState(currentState);
@@ -115,9 +116,9 @@ const App: React.FC = () => {
         } finally {
             setIsRunning(false);
         }
-    }, [goal, maxIterations, settings]);
+    }, [goal, maxIterations, settings, ragContent]);
 
-    const handleRunWorkflowFromFile = (file: File) => {
+    const handleRunWorkflowFromStateFile = (file: File) => {
         const reader = new FileReader();
         reader.onload = async (e) => {
             try {
@@ -148,6 +149,22 @@ const App: React.FC = () => {
         };
         reader.readAsText(file);
     };
+    
+    const handleUploadKnowledge = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result;
+            if (typeof text === 'string') {
+                setRagContent(text);
+            } else {
+                setError("Failed to read the knowledge file.");
+            }
+        };
+        reader.onerror = () => {
+            setError(`Failed to read the file: ${reader.error?.message}`);
+        };
+        reader.readAsText(file);
+    };
 
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8 flex flex-col">
@@ -169,7 +186,9 @@ const App: React.FC = () => {
                             isRunning={isRunning}
                             isAuthenticated={isAuthenticated}
                             onRunWorkflow={() => handleRunWorkflow()}
-                            onRunWorkflowFromFile={handleRunWorkflowFromFile}
+                            onRunWorkflowFromStateFile={handleRunWorkflowFromStateFile}
+                            onUploadKnowledge={handleUploadKnowledge}
+                            ragContentProvided={!!ragContent}
                             onLoginClick={() => setIsAuthModalOpen(true)}
                         />
                         <Tip />

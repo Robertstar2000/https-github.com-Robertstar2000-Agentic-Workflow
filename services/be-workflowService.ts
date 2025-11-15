@@ -1,10 +1,9 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import type { LLMSettings, WorkflowState, ProviderSettings } from "../types";
 
 const GOOGLE_API_KEY = process.env.API_KEY;
 
-const getSystemPrompt = (currentState: WorkflowState) => {
+const getSystemPrompt = (currentState: WorkflowState, ragContent?: string) => {
     const contextReminder =
         currentState.currentIteration > 0 &&
         currentState.currentIteration % 5 === 0 &&
@@ -19,11 +18,17 @@ ${currentState.state.initialPlan.map((step, i) => `  ${i + 1}. ${step}`).join('\
 ---
 ` : '';
 
+    const ragInstruction = ragContent ? `
+**Knowledge Document Available:** A document has been uploaded by the user. You can search it for specific information.
+To search the document, act as the Worker and create an artifact with the key \`rag_query\` and the value as your search query (e.g., { "key": "rag_query", "value": "what is the security protocol" }).
+After creating the artifact, end your turn by updating the 'notes' field to indicate you are waiting for search results. The system will perform the search, and the results will be available in an artifact named \`rag_results\` in the next iteration. Do not try to create the \`rag_results\` artifact yourself.
+` : '';
+
     return `${contextReminder}
 You are an intelligent automation platform executing a complex, multi-step workflow.
 Your goal is to achieve the user's objective by breaking it down into steps and iterating until completion.
 You operate in a loop of three agents: Planner, Worker, and QA.
-
+${ragInstruction}
 **Workflow Execution Flow:**
 
 1.  **Planner:** Your first task is always to act as the Planner. Analyze the goal and the current state.
@@ -97,13 +102,13 @@ const responseSchema = {
 };
 
 
-const _runGoogleWorkflow = async (currentState: WorkflowState, settings: ProviderSettings): Promise<WorkflowState> => {
+const _runGoogleWorkflow = async (currentState: WorkflowState, settings: ProviderSettings, ragContent?: string): Promise<WorkflowState> => {
      if (!GOOGLE_API_KEY) {
         throw new Error("Google API key is not set in environment variables.");
     }
     const ai = new GoogleGenAI({ apiKey: GOOGLE_API_KEY });
 
-    const prompt = getSystemPrompt(currentState);
+    const prompt = getSystemPrompt(currentState, ragContent);
 
     const response = await ai.models.generateContent({
         model: settings.model,
@@ -125,9 +130,9 @@ const _runGoogleWorkflow = async (currentState: WorkflowState, settings: Provide
     }
 };
 
-const _runOllamaWorkflow = async (currentState: WorkflowState, settings: ProviderSettings): Promise<WorkflowState> => {
+const _runOllamaWorkflow = async (currentState: WorkflowState, settings: ProviderSettings, ragContent?: string): Promise<WorkflowState> => {
     const url = `${settings.baseURL}/api/generate`;
-    const prompt = getSystemPrompt(currentState);
+    const prompt = getSystemPrompt(currentState, ragContent);
     const body = {
         model: settings.model,
         prompt: prompt,
@@ -152,51 +157,178 @@ const _runOllamaWorkflow = async (currentState: WorkflowState, settings: Provide
     }
 };
 
-// Placeholder for OpenAI
-const _runOpenAIWorkflow = async (currentState: WorkflowState, settings: ProviderSettings): Promise<WorkflowState> => {
-    console.warn("OpenAI provider is not fully implemented.");
-    throw new Error("OpenAI provider not implemented.");
-    // Example implementation:
-    // const url = `${settings.baseURL}/chat/completions`;
-    // const prompt = getSystemPrompt(currentState);
-    // const body = { model: settings.model, messages: [{ role: 'system', content: prompt }], response_format: { type: 'json_object' } };
-    // const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` };
-    // const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
-    // const data = await response.json();
-    // return JSON.parse(data.choices[0].message.content) as WorkflowState;
+const _runOpenAIWorkflow = async (currentState: WorkflowState, settings: ProviderSettings, ragContent?: string): Promise<WorkflowState> => {
+    if (!settings.apiKey) {
+        throw new Error(`API key is missing for ${settings.baseURL}.`);
+    }
+    const url = `${settings.baseURL}/chat/completions`;
+    const prompt = getSystemPrompt(currentState, ragContent);
+    const body = {
+        model: settings.model,
+        messages: [{ role: 'system', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.7,
+    };
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${settings.apiKey}`
+    };
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API error for ${settings.baseURL} (${response.status}): ${errorText}`);
+    }
+    const data = await response.json();
+    try {
+        return JSON.parse(data.choices[0].message.content) as WorkflowState;
+    } catch (e) {
+        console.error(`Failed to parse JSON from ${settings.baseURL} response:`, data.choices[0].message.content);
+        throw new Error("The model returned invalid JSON.");
+    }
 };
 
-// Placeholder for Claude
-const _runClaudeWorkflow = async (currentState: WorkflowState, settings: ProviderSettings): Promise<WorkflowState> => {
-    console.warn("Claude provider is not fully implemented.");
-    throw new Error("Claude provider not implemented.");
+const _runClaudeWorkflow = async (currentState: WorkflowState, settings: ProviderSettings, ragContent?: string): Promise<WorkflowState> => {
+    if (!settings.apiKey) {
+        throw new Error("API key is missing for Claude provider.");
+    }
+    const url = `${settings.baseURL}/messages`;
+
+    const systemPromptPart = getSystemPrompt(currentState, ragContent).split('**Current State:**')[0];
+    const userPrompt = `
+**Current State:**
+You are on iteration ${currentState.currentIteration + 1} of ${currentState.maxIterations}.
+The current state of the workflow is provided below in JSON format. Do not repeat it in your response.
+
+\`\`\`json
+${JSON.stringify(currentState, null, 2)}
+\`\`\`
+
+**Your Task:**
+Perform the next logical agent action (Planner -> Worker -> QA).
+You MUST respond with only the raw JSON object representing the full, updated workflow state. Do not include any other text, explanations, or markdown formatting like \`\`\`json ... \`\`\`. Your entire response must be the JSON object itself.
+`;
+
+    const body = {
+        model: settings.model,
+        max_tokens: 4096,
+        system: systemPromptPart,
+        messages: [{ role: 'user', content: userPrompt }],
+        temperature: 0.7,
+    };
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-api-key': settings.apiKey,
+        'anthropic-version': '2023-06-01'
+    };
+    
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify(body)
+    });
+    
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Claude API error (${response.status}): ${errorText}`);
+    }
+    
+    const data = await response.json();
+    try {
+        const responseText = data.content[0].text;
+        const jsonMatch = responseText.match(/{[\s\S]*}/);
+        if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]) as WorkflowState;
+        }
+        throw new Error("No valid JSON object found in the response.");
+    } catch (e) {
+        console.error("Failed to parse JSON from Claude response:", data.content[0]?.text, e);
+        throw new Error("Claude returned a response that could not be parsed as JSON.");
+    }
 };
 
-// Placeholder for OpenRouter
-const _runOpenRouterWorkflow = async (currentState: WorkflowState, settings: ProviderSettings): Promise<WorkflowState> => {
-    console.warn("OpenRouter provider is not fully implemented.");
-    throw new Error("OpenRouter provider not implemented.");
+const _runOpenRouterWorkflow = async (currentState: WorkflowState, settings: ProviderSettings, ragContent?: string): Promise<WorkflowState> => {
+    // OpenRouter uses the OpenAI-compatible API
+    return _runOpenAIWorkflow(currentState, settings, ragContent);
 };
 
+const _executeRAG = (query: string, content: string): string => {
+    if (!query || !content) {
+        return "No query or content provided for search.";
+    }
 
-export const runWorkflowIteration = async (currentState: WorkflowState, settings: LLMSettings): Promise<WorkflowState> => {
+    const chunks = content.split(/\n\s*\n/).filter(p => p.trim().length > 10);
+    const queryWords = new Set(query.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+    
+    if (queryWords.size === 0) {
+        return "Query is too generic. Please provide more specific keywords.";
+    }
+    
+    const scoredChunks = chunks.map(chunk => {
+        const chunkWords = new Set(chunk.toLowerCase().split(/\s+/));
+        let score = 0;
+        for (const word of queryWords) {
+            if (chunkWords.has(word)) {
+                score++;
+            }
+        }
+        return { chunk, score };
+    }).filter(item => item.score > 0);
+
+    scoredChunks.sort((a, b) => b.score - a.score);
+    const topChunks = scoredChunks.slice(0, 3).map(item => item.chunk);
+
+    if (topChunks.length === 0) {
+        return "No relevant information found in the document for your query.";
+    }
+
+    return `Here are the most relevant snippets from the document:\n\n---\n\n${topChunks.join('\n\n---\n\n')}`;
+};
+
+export const runWorkflowIteration = async (currentState: WorkflowState, settings: LLMSettings, ragContent?: string): Promise<WorkflowState> => {
     const provider = settings.provider;
     const providerSettings = settings[provider];
     
+    let newState: WorkflowState;
+
     switch (provider) {
         case 'google':
-            return _runGoogleWorkflow(currentState, providerSettings);
+            newState = await _runGoogleWorkflow(currentState, providerSettings, ragContent);
+            break;
         case 'ollama':
-            return _runOllamaWorkflow(currentState, providerSettings);
+            newState = await _runOllamaWorkflow(currentState, providerSettings, ragContent);
+            break;
         case 'openai':
-            return _runOpenAIWorkflow(currentState, providerSettings);
+            newState = await _runOpenAIWorkflow(currentState, providerSettings, ragContent);
+            break;
         case 'claude':
-            return _runClaudeWorkflow(currentState, providerSettings);
+            newState = await _runClaudeWorkflow(currentState, providerSettings, ragContent);
+            break;
         case 'openrouter':
-            return _runOpenRouterWorkflow(currentState, providerSettings);
+            newState = await _runOpenRouterWorkflow(currentState, providerSettings, ragContent);
+            break;
         default:
             throw new Error(`Unsupported provider: ${provider}`);
     }
+
+    const ragQueryArtifact = newState.state.artifacts.find(a => a.key === 'rag_query');
+
+    if (ragQueryArtifact) {
+        newState.state.artifacts = newState.state.artifacts.filter(a => a.key !== 'rag_query');
+        if (ragContent) {
+            const query = ragQueryArtifact.value;
+            const ragResults = _executeRAG(query, ragContent);
+            newState.state.artifacts.push({ key: 'rag_results', value: ragResults });
+            newState.state.notes = `I have completed the requested search for "${query}". The results are now available in the 'rag_results' artifact. Please review them and continue with your task.`;
+        } else {
+            newState.state.notes = `You requested a search, but no knowledge document has been provided by the user. Please proceed with the task using your existing knowledge.`;
+        }
+    }
+
+    return newState;
 };
 
 export const testProviderConnection = async (settings: LLMSettings): Promise<boolean> => {
