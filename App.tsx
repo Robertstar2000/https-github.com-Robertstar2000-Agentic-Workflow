@@ -21,7 +21,10 @@ const DEFAULT_SETTINGS: LLMSettings = {
     ollama: { model: 'llama3', baseURL: 'http://localhost:11434' },
 };
 
-
+/**
+ * Main application component.
+ * Manages the overall state of the workflow, settings, and modals.
+ */
 const App: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [goal, setGoal] = useState('');

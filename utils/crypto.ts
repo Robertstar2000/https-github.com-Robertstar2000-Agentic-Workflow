@@ -48,9 +48,9 @@ const getKey = async (): Promise<CryptoKey> => {
 };
 
 /**
- * Encrypts a plaintext string.
+ * Encrypts a plaintext string using AES-GCM.
  * @param {string} plaintext - The string to encrypt.
- * @returns {Promise<string>} The base64-encoded encrypted string (IV + ciphertext).
+ * @returns {Promise<string>} The base64-encoded encrypted string (IV + ciphertext). Returns plaintext if encryption fails.
  */
 export const encrypt = async (plaintext: string): Promise<string> => {
     if (!plaintext) {
@@ -77,9 +77,9 @@ export const encrypt = async (plaintext: string): Promise<string> => {
 };
 
 /**
- * Decrypts a base64-encoded ciphertext string.
+ * Decrypts a base64-encoded ciphertext string using AES-GCM.
  * @param {string} ciphertext - The encrypted string.
- * @returns {Promise<string>} The decrypted plaintext.
+ * @returns {Promise<string>} The decrypted plaintext. Returns original ciphertext if decryption fails.
  */
 export const decrypt = async (ciphertext: string): Promise<string> => {
     if (!ciphertext) {

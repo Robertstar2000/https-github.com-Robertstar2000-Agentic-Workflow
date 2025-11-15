@@ -15,13 +15,27 @@ interface SettingsModalProps {
 
 type TestStatus = 'idle' | 'testing' | 'success' | 'error';
 
-const ProviderSettingsForm: React.FC<{
-    providerKey: keyof Omit<LLMSettings, 'provider'>,
-    settings: ProviderSettings,
-    onChange: (newProviderSettings: ProviderSettings) => void,
-    onTest: () => Promise<void>,
-    testStatus: TestStatus,
-}> = ({ providerKey, settings, onChange, onTest, testStatus }) => {
+/**
+ * Props for the ProviderSettingsForm component.
+ */
+interface ProviderSettingsFormProps {
+    /** The key of the provider being configured (e.g., 'openai', 'claude'). */
+    providerKey: keyof Omit<LLMSettings, 'provider'>;
+    /** The current settings for this provider. */
+    settings: ProviderSettings;
+    /** Callback to update the provider's settings. */
+    onChange: (newProviderSettings: ProviderSettings) => void;
+    /** Async callback to test the connection for this provider. */
+    onTest: () => Promise<void>;
+    /** The current status of the connection test. */
+    testStatus: TestStatus;
+}
+
+/**
+ * A form for configuring the settings of a single LLM provider.
+ * @param {ProviderSettingsFormProps} props - The component props.
+ */
+const ProviderSettingsForm: React.FC<ProviderSettingsFormProps> = ({ providerKey, settings, onChange, onTest, testStatus }) => {
     const hasApiKey = providerKey !== 'google' && providerKey !== 'ollama';
     const hasBaseURL = providerKey !== 'google';
 
@@ -84,6 +98,12 @@ const ProviderSettingsForm: React.FC<{
     );
 };
 
+/**
+ * A modal component for configuring LLM provider settings.
+ * It allows switching between providers and updating their respective configurations.
+ * Settings are automatically saved to local storage.
+ * @param {SettingsModalProps} props - The component props.
+ */
 export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, setSettings, onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
     const [activeProvider, setActiveProvider] = useState<LLMSettings['provider']>(settings.provider);

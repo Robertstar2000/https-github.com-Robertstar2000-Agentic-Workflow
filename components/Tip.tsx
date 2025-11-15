@@ -1,7 +1,11 @@
 
+
 import React from 'react';
 import { LightBulbIcon } from './icons';
 
+/**
+ * A simple component that displays a usage tip to the user.
+ */
 export const Tip: React.FC = () => {
     return (
         <div className="mt-4 flex items-center justify-center gap-2 text-sm text-text-muted">

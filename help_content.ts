@@ -1,4 +1,7 @@
-// This file stores the content of help.md as a string to be easily imported.
+/**
+ * This file stores the content of help.md as a string to be easily imported
+ * into the HelpModal component without needing a file loader.
+ */
 export const helpContent = `
 ### Welcome to the AI Workflow System!
 

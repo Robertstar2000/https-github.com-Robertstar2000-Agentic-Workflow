@@ -1,11 +1,21 @@
 import React from 'react';
 import { XIcon, GoogleIcon, MicrosoftIcon, GithubIcon, UserIcon } from './icons';
 
+/**
+ * Props for the AuthModal component.
+ */
 interface AuthModalProps {
+    /** Callback function to close the modal. */
     onClose: () => void;
+    /** Callback function to indicate the user has been "authenticated". */
     onAuthenticated: () => void;
 }
 
+/**
+ * A modal component for displaying a simulated authentication flow.
+ * In a real application, this would handle OAuth2 flows and user credentials.
+ * @param {AuthModalProps} props - The component props.
+ */
 export const AuthModal: React.FC<AuthModalProps> = ({ onClose, onAuthenticated }) => {
     // NOTE: This is a simulated authentication flow.
     // In a real application, these buttons would trigger a full OAuth2 flow

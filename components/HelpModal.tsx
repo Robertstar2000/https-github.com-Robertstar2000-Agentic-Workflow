@@ -2,11 +2,19 @@ import React, { useEffect, useRef } from 'react';
 import { XIcon } from './icons';
 import { helpContent } from '../help_content';
 
+/**
+ * Props for the HelpModal component.
+ */
 interface HelpModalProps {
+    /** Callback function to close the modal. */
     onClose: () => void;
 }
 
-// A more robust markdown-to-HTML converter
+/**
+ * A simple markdown-to-HTML converter for the help content.
+ * @param {string} text - The markdown text to parse.
+ * @returns {string} The parsed HTML string.
+ */
 const parseMarkdown = (text: string): string => {
     const lines = text.split('\n');
     const htmlElements: string[] = [];
@@ -49,7 +57,11 @@ const parseMarkdown = (text: string): string => {
     return htmlElements.join('');
 };
 
-
+/**
+ * A modal that displays help and instruction content to the user.
+ * The content is sourced from a markdown string and rendered as HTML.
+ * @param {HelpModalProps} props - The component props.
+ */
 export const HelpModal: React.FC<HelpModalProps> = ({ onClose }) => {
     const modalRef = useRef<HTMLDivElement>(null);
 

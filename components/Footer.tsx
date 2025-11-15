@@ -1,5 +1,8 @@
 import React from 'react';
 
+/**
+ * Renders the application footer with attribution.
+ */
 export const Footer: React.FC = () => {
     return (
         <footer className="w-full text-center py-6 mt-8">

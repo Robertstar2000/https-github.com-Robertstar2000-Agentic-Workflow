@@ -1,14 +1,27 @@
 import React from 'react';
 import { CheckCircleIcon, CogIcon, WarningIcon, QuestionMarkCircleIcon } from './icons';
 
+/**
+ * Props for the Header component.
+ */
 interface HeaderProps {
+    /** Whether the user is currently authenticated. */
     isAuthenticated: boolean;
+    /** Callback function to open the authentication modal. */
     onLoginClick: () => void;
+    /** Callback function to handle user logout. */
     onLogoutClick: () => void;
+    /** Callback function to open the settings modal. */
     onSettingsClick: () => void;
+    /** Callback function to open the help modal. */
     onHelpClick: () => void;
 }
 
+/**
+ * Renders the main application header, including the title,
+ * authentication status, and action buttons for settings and help.
+ * @param {HeaderProps} props - The component props.
+ */
 export const Header: React.FC<HeaderProps> = ({ isAuthenticated, onLoginClick, onLogoutClick, onSettingsClick, onHelpClick }) => {
     return (
         <header className="flex justify-between items-center pb-4 border-b border-border-muted">

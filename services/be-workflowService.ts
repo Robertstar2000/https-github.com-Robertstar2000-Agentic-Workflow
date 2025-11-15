@@ -3,6 +3,12 @@ import type { LLMSettings, WorkflowState, ProviderSettings } from "../types";
 
 const GOOGLE_API_KEY = process.env.API_KEY;
 
+/**
+ * Generates the system prompt for the LLM based on the current workflow state.
+ * @param {WorkflowState} currentState - The current state of the workflow.
+ * @param {string} [ragContent] - Optional content from a knowledge document for RAG.
+ * @returns {string} The formatted system prompt.
+ */
 const getSystemPrompt = (currentState: WorkflowState, ragContent?: string) => {
     const contextReminder =
         currentState.currentIteration > 0 &&
@@ -255,6 +261,12 @@ const _runOpenRouterWorkflow = async (currentState: WorkflowState, settings: Pro
     return _runOpenAIWorkflow(currentState, settings, ragContent);
 };
 
+/**
+ * Performs a simple keyword-based search on the provided content.
+ * @param {string} query - The search query.
+ * @param {string} content - The content to search within.
+ * @returns {string} A string containing the most relevant snippets or a message if no results are found.
+ */
 const _executeRAG = (query: string, content: string): string => {
     if (!query || !content) {
         return "No query or content provided for search.";
@@ -288,6 +300,14 @@ const _executeRAG = (query: string, content: string): string => {
     return `Here are the most relevant snippets from the document:\n\n---\n\n${topChunks.join('\n\n---\n\n')}`;
 };
 
+/**
+ * Executes a single iteration of the workflow using the configured LLM provider.
+ * It also handles the RAG (Retrieval-Augmented Generation) flow if requested by the agent.
+ * @param {WorkflowState} currentState - The state of the workflow before the iteration.
+ * @param {LLMSettings} settings - The configured LLM provider settings.
+ * @param {string} [ragContent] - Optional knowledge content for the RAG system.
+ * @returns {Promise<WorkflowState>} The workflow state after the iteration.
+ */
 export const runWorkflowIteration = async (currentState: WorkflowState, settings: LLMSettings, ragContent?: string): Promise<WorkflowState> => {
     const provider = settings.provider;
     const providerSettings = settings[provider];
@@ -331,6 +351,12 @@ export const runWorkflowIteration = async (currentState: WorkflowState, settings
     return newState;
 };
 
+/**
+ * Tests the connection to the currently configured LLM provider to ensure settings are valid.
+ * @param {LLMSettings} settings - The LLM settings to test.
+ * @returns {Promise<boolean>} A promise that resolves to true if the connection is successful.
+ * @throws {Error} Throws an error if the connection fails.
+ */
 export const testProviderConnection = async (settings: LLMSettings): Promise<boolean> => {
     const provider = settings.provider;
     const providerSettings = settings[provider];

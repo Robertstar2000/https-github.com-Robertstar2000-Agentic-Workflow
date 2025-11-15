@@ -1,20 +1,39 @@
 import React, { useRef } from 'react';
 import { LockIcon, PlayIcon, SpinnerIcon, DocumentArrowUpIcon, BookOpenIcon } from './icons';
 
+/**
+ * Props for the WorkflowInput component.
+ */
 interface WorkflowInputProps {
+    /** The current goal description for the workflow. */
     goal: string;
+    /** Callback to update the goal description. */
     setGoal: (goal: string) => void;
+    /** The maximum number of iterations for the workflow. */
     maxIterations: number;
+    /** Callback to update the maximum number of iterations. */
     setMaxIterations: (iterations: number) => void;
+    /** Flag indicating if the workflow is currently running. */
     isRunning: boolean;
+    /** Flag indicating if the user is authenticated. */
     isAuthenticated: boolean;
+    /** Callback to start the workflow with the current goal. */
     onRunWorkflow: () => void;
+    /** Callback to start a workflow from a JSON state file. */
     onRunWorkflowFromStateFile: (file: File) => void;
+    /** Callback to upload a knowledge file for RAG. */
     onUploadKnowledge: (file: File) => void;
+    /** Flag indicating if a RAG content file has been provided. */
     ragContentProvided: boolean;
+    /** Callback to open the login modal. */
     onLoginClick: () => void;
 }
 
+/**
+ * A component for inputting the workflow goal and parameters.
+ * It provides controls to start the workflow, load a state from a file, and upload knowledge documents.
+ * @param {WorkflowInputProps} props - The component props.
+ */
 export const WorkflowInput: React.FC<WorkflowInputProps> = ({
     goal,
     setGoal,
