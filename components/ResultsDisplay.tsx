@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import type { WorkflowState, WorkflowStatus } from '../types';
+import type { WorkflowState, WorkflowStatus, Artifact } from '../types';
 import { jsPDF } from 'jspdf';
-import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon } from './icons';
+import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon, MapIcon, CogIcon } from './icons';
 import { parseAndSanitizeMarkdown } from '../utils/markdown';
 
 /**
@@ -157,9 +157,12 @@ const DownloadButton: React.FC<{ onDownload: () => void; }> = ({ onDownload }) =
  * @param {WorkflowState} props.state - The current state of the workflow to display.
  */
 export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) => {
+    type Tab = 'result' | 'support' | 'log' | 'json';
+    const [activeTab, setActiveTab] = useState<Tab>('result');
     const [isFormatDropdownOpen, setIsFormatDropdownOpen] = useState(false);
     
     const handleDownloadResult = (format: 'pdf' | 'md') => {
+        if (!state.finalResultMarkdown) return;
         if (format === 'pdf') {
             downloadResultAsPdf(state.finalResultMarkdown);
         } else {
@@ -167,54 +170,159 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
         }
         setIsFormatDropdownOpen(false);
     }
+
+    const handleDownloadArtifact = (artifact: Artifact) => {
+        let mimeType = 'text/plain;charset=utf-8';
+        const extension = artifact.key.split('.').pop()?.toLowerCase();
+        switch (extension) {
+            case 'json':
+                mimeType = 'application/json';
+                break;
+            case 'md':
+                mimeType = 'text/markdown;charset=utf-8';
+                break;
+            case 'html':
+                mimeType = 'text/html;charset=utf-8';
+                break;
+            case 'css':
+                mimeType = 'text/css;charset=utf-8';
+                break;
+            case 'js':
+                mimeType = 'application/javascript;charset=utf-8';
+                break;
+        }
+        downloadFile(artifact.value, artifact.key, mimeType);
+    };
+
+    const supportArtifacts = state.state.artifacts.filter(
+        artifact => !['rag_results'].includes(artifact.key)
+    );
     
+    // FIX: Replaced `JSX.Element` with `React.ReactElement` to resolve namespace error.
+    const agentIcons: { [key in 'Planner' | 'Worker' | 'QA']: React.ReactElement } = {
+        Planner: <MapIcon className="w-5 h-5 text-o-purple" />,
+        Worker: <CogIcon className="w-5 h-5 text-i-cyan" />,
+        QA: <CheckCircleIcon className="w-5 h-5 text-f-green" />,
+    };
+    
+    const TabButton: React.FC<{ tab: Tab, label: string }> = ({ tab, label }) => (
+        <button
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors border-t border-l border-r ${
+                activeTab === tab 
+                ? 'bg-card-bg border-border-muted text-text-primary' 
+                : 'bg-transparent border-transparent text-text-muted hover:text-text-secondary'
+            }`}
+            style={{ marginBottom: '-1px' }}
+            aria-selected={activeTab === tab}
+            role="tab"
+        >
+            {label}
+        </button>
+    );
+
     return (
         <div className="space-y-6 animate-fade-in">
             <AgentStatusPanel state={state} />
 
-            {(state.finalResultMarkdown || state.status === 'completed') && (
-                <ResultCard 
-                    title="Result"
-                    actions={
-                        <div className="relative">
-                            <button onClick={() => setIsFormatDropdownOpen(prev => !prev)} className="p-1.5 rounded-md hover:bg-white/10 transition-colors flex items-center gap-1" aria-label="Download result">
-                                <DownloadIcon className="w-5 h-5 text-text-muted" />
-                            </button>
-                            {isFormatDropdownOpen && (
-                                <div className="absolute right-0 mt-2 w-32 bg-slate-800 border border-border-muted rounded-md shadow-lg z-10">
-                                    <a onClick={() => handleDownloadResult('pdf')} className="block px-4 py-2 text-sm text-text-secondary hover:bg-primary-start/20 cursor-pointer">Download as .pdf</a>
-                                    <a onClick={() => handleDownloadResult('md')} className="block px-4 py-2 text-sm text-text-secondary hover:bg-primary-start/20 cursor-pointer">Download as .md</a>
-                                </div>
+            <ResultCard 
+                title="User-facing summary"
+                actions={<DownloadButton onDownload={() => downloadFile(state.finalResultSummary || state.state.notes, 'summary.txt', 'text/plain')} />}
+            >
+                <p className="text-sm font-mono whitespace-pre-wrap text-text-muted">
+                    {state.finalResultSummary || state.state.notes || 'No summary available yet.'}
+                </p>
+            </ResultCard>
+
+            <div>
+                <div className="flex border-b border-border-muted" role="tablist">
+                    <TabButton tab="result" label="Result" />
+                    {supportArtifacts.length > 0 && (
+                         <TabButton tab="support" label={`Support (${supportArtifacts.length})`} />
+                    )}
+                    <TabButton tab="log" label={`Run Log (${state.runLog.length})`} />
+                    <TabButton tab="json" label="JSON State" />
+                </div>
+                
+                <div className="bg-card-bg border border-t-0 border-border-muted rounded-b-xl p-4 min-h-[300px]" role="tabpanel">
+                    {activeTab === 'result' && (
+                        <div className="animate-fade-in space-y-3">
+                             <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-text-secondary">Final Result</h3>
+                                {(state.finalResultMarkdown || state.status === 'completed') && (
+                                     <div className="relative">
+                                        <button onClick={() => setIsFormatDropdownOpen(prev => !prev)} className="p-1.5 rounded-md hover:bg-white/10 transition-colors flex items-center gap-1" aria-label="Download result">
+                                            <DownloadIcon className="w-5 h-5 text-text-muted" />
+                                        </button>
+                                        {isFormatDropdownOpen && (
+                                            <div className="absolute right-0 mt-2 w-32 bg-slate-800 border border-border-muted rounded-md shadow-lg z-10">
+                                                <a onClick={() => handleDownloadResult('pdf')} className="block px-4 py-2 text-sm text-text-secondary hover:bg-primary-start/20 cursor-pointer">Download as .pdf</a>
+                                                <a onClick={() => handleDownloadResult('md')} className="block px-4 py-2 text-sm text-text-secondary hover:bg-primary-start/20 cursor-pointer">Download as .md</a>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {state.finalResultMarkdown ? (
+                                <div className="prose prose-invert prose-sm max-w-none text-text-secondary" dangerouslySetInnerHTML={{ __html: parseAndSanitizeMarkdown(state.finalResultMarkdown) }} />
+                            ) : (
+                                <p className="text-text-muted text-sm pt-4">The final result will be displayed here once the workflow is completed.</p>
                             )}
                         </div>
-                    }
-                >
-                    <div className="prose prose-invert prose-sm max-w-none text-text-secondary" dangerouslySetInnerHTML={{ __html: parseAndSanitizeMarkdown(state.finalResultMarkdown) }} />
-                </ResultCard>
-            )}
+                    )}
+                     
+                    {activeTab === 'support' && (
+                        <div className="animate-fade-in space-y-3">
+                            <h3 className="text-lg font-semibold text-text-secondary">Supporting Documents & Assets</h3>
+                            <div className="max-h-96 overflow-y-auto space-y-2 pr-2">
+                                {supportArtifacts.map((artifact, index) => (
+                                    <div key={index} className="flex items-center justify-between gap-3 p-3 bg-black/20 rounded-lg">
+                                        <p className="font-mono text-sm text-text-secondary break-all">{artifact.key}</p>
+                                        <DownloadButton onDownload={() => handleDownloadArtifact(artifact)} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <ResultCard 
-                    title="User-facing summary" 
-                    className="md:col-span-1"
-                    actions={<DownloadButton onDownload={() => downloadFile(state.finalResultSummary || state.state.notes, 'summary.txt', 'text/plain')} />}
-                >
-                    <p className="text-sm font-mono whitespace-pre-wrap text-text-muted">
-                        {state.finalResultSummary || state.state.notes || 'No summary available yet.'}
-                    </p>
-                </ResultCard>
+                    {activeTab === 'log' && (
+                        <div className="animate-fade-in space-y-3">
+                             <h3 className="text-lg font-semibold text-text-secondary">Execution Log</h3>
+                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
+                                {state.runLog.length > 0 ? state.runLog.map((entry, index) => (
+                                    <div key={index} className="flex items-start gap-3 p-2 bg-black/20 rounded-lg">
+                                        <div className="flex-shrink-0 mt-1" aria-hidden="true">
+                                            {agentIcons[entry.agent]}
+                                        </div>
+                                        <div>
+                                            <p className="font-semibold text-sm">
+                                                <span className="text-text-secondary">{entry.agent}</span>
+                                                <span className="text-text-muted font-normal"> (Iteration {entry.iteration})</span>
+                                            </p>
+                                            <p className="text-sm text-text-muted">{entry.summary}</p>
+                                        </div>
+                                    </div>
+                                )) : (
+                                    <p className="text-text-muted text-sm pt-4">The execution log will appear here as the workflow runs.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
-                <ResultCard 
-                    title="JSON Payload" 
-                    className="md:col-span-1"
-                    actions={<DownloadButton onDownload={() => downloadFile(JSON.stringify(state, null, 2), 'workflow-state.json', 'application/json')} />}
-                >
-                     <div className="max-h-64 overflow-y-auto bg-black/50 p-2 rounded-md">
-                        <pre className="text-xs text-text-secondary whitespace-pre-wrap">
-                            <code>{JSON.stringify(state, null, 2)}</code>
-                        </pre>
-                    </div>
-                </ResultCard>
+                     {activeTab === 'json' && (
+                        <div className="animate-fade-in space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-text-secondary">Full JSON State</h3>
+                                <DownloadButton onDownload={() => downloadFile(JSON.stringify(state, null, 2), 'workflow-state.json', 'application/json')} />
+                            </div>
+                             <div className="max-h-96 overflow-y-auto bg-black/50 p-2 rounded-md">
+                                <pre className="text-xs text-text-secondary whitespace-pre-wrap" aria-label="JSON state">
+                                    <code>{JSON.stringify(state, null, 2)}</code>
+                                </pre>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

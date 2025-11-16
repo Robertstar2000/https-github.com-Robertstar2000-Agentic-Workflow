@@ -10,6 +10,7 @@ import type { LLMSettings, WorkflowState } from './types';
 import { Tip } from './components/Tip';
 import { decrypt } from './utils/crypto';
 import { Footer } from './components/Footer';
+import { PlanSidebar } from './components/PlanSidebar';
 
 
 const DEFAULT_SETTINGS: LLMSettings = {
@@ -171,51 +172,60 @@ const App: React.FC = () => {
 
     return (
         <div className="min-h-screen p-4 sm:p-6 md:p-8 flex flex-col">
-            <div className="w-full max-w-5xl mx-auto flex-grow">
-                <Header 
-                    isAuthenticated={isAuthenticated} 
-                    onLoginClick={() => setIsAuthModalOpen(true)}
-                    onLogoutClick={() => setIsAuthenticated(false)}
-                    onSettingsClick={() => setIsSettingsOpen(true)}
-                    onHelpClick={() => setIsHelpModalOpen(true)}
-                />
-                <main className="mt-8">
-                    <div className="bg-card-bg border border-border-muted rounded-xl shadow-2xl p-6 backdrop-blur-lg">
-                        <WorkflowInput
-                            goal={goal}
-                            setGoal={setGoal}
-                            maxIterations={maxIterations}
-                            setMaxIterations={setMaxIterations}
-                            isRunning={isRunning}
-                            isAuthenticated={isAuthenticated}
-                            onRunWorkflow={() => handleRunWorkflow()}
-                            onRunWorkflowFromStateFile={handleRunWorkflowFromStateFile}
-                            onUploadKnowledge={handleUploadKnowledge}
-                            ragContentProvided={!!ragContent}
-                            onLoginClick={() => setIsAuthModalOpen(true)}
-                        />
-                        <Tip />
-                    </div>
-
-                    {error && (
-                         <div className="mt-6 bg-red-900/50 border border-error text-error p-4 rounded-lg text-center">
-                            <p className="font-semibold">Error</p>
-                            <p className="text-sm">{error}</p>
+            <div className="w-full max-w-7xl mx-auto flex-grow flex gap-8">
+                {workflowState && workflowState.state.steps && workflowState.state.steps.length > 0 && (
+                    <PlanSidebar
+                        steps={workflowState.state.steps}
+                        progress={workflowState.state.progress}
+                        status={workflowState.status}
+                    />
+                )}
+                <div className="flex-1 flex flex-col min-w-0">
+                    <Header 
+                        isAuthenticated={isAuthenticated} 
+                        onLoginClick={() => setIsAuthModalOpen(true)}
+                        onLogoutClick={() => setIsAuthenticated(false)}
+                        onSettingsClick={() => setIsSettingsOpen(true)}
+                        onHelpClick={() => setIsHelpModalOpen(true)}
+                    />
+                    <main className="mt-8 flex-grow">
+                        <div className="bg-card-bg border border-border-muted rounded-xl shadow-2xl p-6 backdrop-blur-lg">
+                            <WorkflowInput
+                                goal={goal}
+                                setGoal={setGoal}
+                                maxIterations={maxIterations}
+                                setMaxIterations={setMaxIterations}
+                                isRunning={isRunning}
+                                isAuthenticated={isAuthenticated}
+                                onRunWorkflow={() => handleRunWorkflow()}
+                                onRunWorkflowFromStateFile={handleRunWorkflowFromStateFile}
+                                onUploadKnowledge={handleUploadKnowledge}
+                                ragContentProvided={!!ragContent}
+                                onLoginClick={() => setIsAuthModalOpen(true)}
+                            />
+                            <Tip />
                         </div>
-                    )}
-                    
-                    <div className="mt-8">
-                        {workflowState ? (
-                            <ResultsDisplay state={workflowState} />
-                        ) : (
-                             <div className="text-center text-text-muted py-12">
-                                <p>Run the workflow to see a detailed summary...</p>
+
+                        {error && (
+                             <div className="mt-6 bg-red-900/50 border border-error text-error p-4 rounded-lg text-center">
+                                <p className="font-semibold">Error</p>
+                                <p className="text-sm">{error}</p>
                             </div>
                         )}
-                    </div>
-                </main>
+                        
+                        <div className="mt-8">
+                            {workflowState ? (
+                                <ResultsDisplay state={workflowState} />
+                            ) : (
+                                 <div className="text-center text-text-muted py-12">
+                                    <p>Run the workflow to see a detailed summary...</p>
+                                </div>
+                            )}
+                        </div>
+                    </main>
+                    <Footer />
+                </div>
             </div>
-            <Footer />
             {isSettingsOpen && (
                 <SettingsModal 
                     settings={settings}
