@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from 'react';
 import { Header } from './components/Header';
 import { WorkflowInput } from './components/WorkflowInput';
@@ -21,6 +22,9 @@ const DEFAULT_SETTINGS: LLMSettings = {
     claude: { apiKey: '', model: 'claude-3-opus-20240229', baseURL: 'https://api.anthropic.com/v1' },
     openrouter: { apiKey: '', model: 'openai/gpt-4o', baseURL: 'https://openrouter.ai/api/v1' },
     ollama: { model: 'llama3', baseURL: 'http://localhost:11434' },
+    groq: { apiKey: '', model: 'llama3-70b-8192', baseURL: 'https://api.groq.com/openai/v1' },
+    samba: { apiKey: '', model: 'samba-ai/samba-cog-lora', baseURL: 'https://api.sambanova.ai/v1' },
+    cerberus: { apiKey: '', model: 'cerberus-v1', baseURL: 'https://api.cerberus.ai/v1' },
 };
 
 /**
@@ -58,6 +62,15 @@ const App: React.FC = () => {
                     }
                     if (parsedSettings.openrouter.apiKey) {
                         parsedSettings.openrouter.apiKey = await decrypt(parsedSettings.openrouter.apiKey);
+                    }
+                    if (parsedSettings.groq?.apiKey) {
+                        parsedSettings.groq.apiKey = await decrypt(parsedSettings.groq.apiKey);
+                    }
+                    if (parsedSettings.samba?.apiKey) {
+                        parsedSettings.samba.apiKey = await decrypt(parsedSettings.samba.apiKey);
+                    }
+                    if (parsedSettings.cerberus?.apiKey) {
+                        parsedSettings.cerberus.apiKey = await decrypt(parsedSettings.cerberus.apiKey);
                     }
                     
                     // Merge with defaults to ensure all keys are present

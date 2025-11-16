@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import type { LLMSettings, ProviderSettings } from '../types';
 import { XIcon, CheckCircleIcon, XCircleIcon, SpinnerIcon } from './icons';
@@ -111,7 +112,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, setSetti
         openai: 'idle',
         claude: 'idle',
         openrouter: 'idle',
-        ollama: 'idle'
+        ollama: 'idle',
+        groq: 'idle',
+        samba: 'idle',
+        cerberus: 'idle',
     });
     const [testRunnerStatus, setTestRunnerStatus] = useState<'idle' | 'running' | 'finished'>('idle');
     const [testResults, setTestResults] = useState<TestResult[]>([]);
@@ -141,6 +145,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, setSetti
             }
              if (settingsToSave.openrouter.apiKey) {
                 settingsToSave.openrouter.apiKey = await encrypt(settingsToSave.openrouter.apiKey);
+            }
+            if (settingsToSave.groq.apiKey) {
+                settingsToSave.groq.apiKey = await encrypt(settingsToSave.groq.apiKey);
+            }
+            if (settingsToSave.samba.apiKey) {
+                settingsToSave.samba.apiKey = await encrypt(settingsToSave.samba.apiKey);
+            }
+            if (settingsToSave.cerberus.apiKey) {
+                settingsToSave.cerberus.apiKey = await encrypt(settingsToSave.cerberus.apiKey);
             }
 
             localStorage.setItem('ai-workflow-settings', JSON.stringify(settingsToSave));
@@ -195,7 +208,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, setSetti
     };
 
 
-    const providers: LLMSettings['provider'][] = ['google', 'openai', 'claude', 'openrouter', 'ollama'];
+    const providers: LLMSettings['provider'][] = ['google', 'openai', 'claude', 'openrouter', 'ollama', 'groq', 'samba', 'cerberus'];
 
     const passedCount = testResults.filter(r => r.passed).length;
     const failedCount = testResults.length - passedCount;

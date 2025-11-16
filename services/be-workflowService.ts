@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import type { LLMSettings, WorkflowState, ProviderSettings } from "../types";
 
@@ -77,7 +78,18 @@ Your context window is limited. To ensure the workflow runs smoothly, you MUST a
     -   **CRITICAL RULE: Save All Work.** You are REQUIRED to save ANY and ALL files, documents, code snippets, or data structures you generate as an artifact. There are no exceptions. If a step involves creating something, your action MUST result in a new entry in the 'artifacts' array. Use a descriptive key for the artifact (e.g., 'final_report.md', 'component.tsx', 'style_guide.css').
     -   **Code Generation:** When a step requires generating code, you MUST write it in TypeScript (\`.ts\`/\`.tsx\`) or JavaScript (\`.js\`). All code artifacts must have the appropriate file extension.
     -   For complex values (objects, arrays), you MUST JSON.stringify them and store the resulting string in the 'value' field of the artifact object. Update the 'progress' field. Log your action.
-3.  **QA:** After the Worker, you act as the QA agent. Compare the original goal against the current state and artifacts. If the goal is fully achieved, set status to "completed" and generate the final 'finalResultMarkdown' and 'finalResultSummary'. If the goal is not met, provide specific, concrete feedback and instructions in the 'notes' field for the Planner's next iteration. Set status back to "running". If you are stuck or the goal is ambiguous, set status to "needs_clarification" and write clarifying questions in the notes.
+3.  **QA:** After the Worker, you act as the QA agent.
+    -   **Review:** Compare the original goal against the current state and artifacts.
+    -   **If Not Complete:** If the goal is not met, provide specific, concrete feedback and instructions in the 'notes' field for the Planner's next iteration. Set status back to "running". If you are stuck or the goal is ambiguous, set status to "needs_clarification" and write clarifying questions in the notes.
+    -   **If Complete:** If the goal is fully achieved, you MUST perform the following final steps:
+        1.  **Generate README:** Create a comprehensive \`README.md\` file as a new artifact. This file is the primary deliverable. Its content should be professionally formatted and inspired by high-quality open-source projects (like \`cline/cline\` on GitHub). It MUST include:
+            -   A clear title and a concise one-sentence summary of the project.
+            -   An "Overview" section explaining the project's purpose and key features.
+            -   A "Getting Started" or "Usage" section with instructions. For code, this means installation (\`npm install\`) and execution (\`npm run dev\`) commands. For reports, this means explaining the findings.
+            -   A "Technical Details" or "Methodology" section if applicable, detailing architecture or dependencies.
+        2.  **Update State:** Add the new \`README.md\` artifact to the \`artifacts\` array.
+        3.  **Set Final Outputs:** Set the \`finalResultMarkdown\` field to the **exact same content** as the \`README.md\` artifact. Generate a brief, user-friendly summary of the project's outcome and put it in the \`finalResultSummary\` field.
+        4.  **Set Status:** Finally, set the \`status\` to "completed".
 
 **Final Output Structure:**
 If the goal is to create a "project repository" or a runnable application, the final set of artifacts should represent a complete file structure. This includes source code files (e.g., \`index.ts\`, \`App.tsx\`), dependency files (\`package.json\`), build configuration (\`tsconfig.json\`, \`vite.config.ts\`), and public assets (\`index.html\`). The final consolidation step should ensure all these files are present and correctly structured.
@@ -369,6 +381,12 @@ export const runWorkflowIteration = async (currentState: WorkflowState, settings
         case 'openrouter':
             newState = await _runOpenRouterWorkflow(currentState, providerSettings, ragContent, fetchFn);
             break;
+        case 'groq':
+        case 'samba':
+        case 'cerberus':
+            // Assume OpenAI-compatible API
+            newState = await _runOpenAIWorkflow(currentState, providerSettings, ragContent, fetchFn);
+            break;
         default:
             throw new Error(`Unsupported provider: ${provider}`);
     }
@@ -416,6 +434,9 @@ export const testProviderConnection = async (settings: LLMSettings, fetchOverrid
                 return Array.isArray(ollamaData.models);
             case 'openai':
             case 'openrouter':
+            case 'groq':
+            case 'samba':
+            case 'cerberus':
                  if (!providerSettings.apiKey) throw new Error("API Key is missing.");
                 const url = `${providerSettings.baseURL}/models`;
                 const headers = { 'Authorization': `Bearer ${providerSettings.apiKey}` };

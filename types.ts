@@ -17,7 +17,7 @@ export interface ProviderSettings {
  */
 export interface LLMSettings {
     /** The currently active LLM provider. */
-    provider: 'google' | 'openai' | 'claude' | 'openrouter' | 'ollama';
+    provider: 'google' | 'openai' | 'claude' | 'openrouter' | 'ollama' | 'groq' | 'samba' | 'cerberus';
     /** Settings for the Google provider. */
     google: ProviderSettings;
     /** Settings for the OpenAI provider. */
@@ -28,6 +28,12 @@ export interface LLMSettings {
     openrouter: ProviderSettings;
     /** Settings for a local Ollama provider. */
     ollama: ProviderSettings;
+    /** Settings for the Groq provider. */
+    groq: ProviderSettings;
+    /** Settings for the Samba provider. */
+    samba: ProviderSettings;
+    /** Settings for the Cerberus provider. */
+    cerberus: ProviderSettings;
 }
 
 /**

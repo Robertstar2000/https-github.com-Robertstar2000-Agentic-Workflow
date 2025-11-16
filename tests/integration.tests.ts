@@ -54,6 +54,7 @@ export const runIntegrationTests = () => {
                 } as any;
             };
 
+            // FIX: Added missing properties to conform to LLMSettings type.
             const settings: LLMSettings = {
                 provider: 'openai',
                 openai: { apiKey: 'test-key', model: 'gpt-4o', baseURL: 'https://api.openai.com/v1' },
@@ -61,6 +62,9 @@ export const runIntegrationTests = () => {
                 claude: { apiKey: '', model: ''},
                 openrouter: { apiKey: '', model: ''},
                 ollama: { model: ''},
+                groq: { apiKey: '', model: '' },
+                samba: { apiKey: '', model: '' },
+                cerberus: { apiKey: '', model: '' },
             };
 
             const newState = await runWorkflowIteration(MOCK_STATE, settings, undefined, mockFetch);
@@ -93,6 +97,7 @@ export const runIntegrationTests = () => {
             } as any);
 
 
+            // FIX: Added missing properties to conform to LLMSettings type.
             const settings: LLMSettings = {
                 provider: 'openai',
                 openai: { apiKey: 'test-key', model: 'gpt-4o', baseURL: 'https://api.openai.com/v1' },
@@ -100,6 +105,9 @@ export const runIntegrationTests = () => {
                 claude: { apiKey: '', model: ''},
                 openrouter: { apiKey: '', model: ''},
                 ollama: { model: ''},
+                groq: { apiKey: '', model: '' },
+                samba: { apiKey: '', model: '' },
+                cerberus: { apiKey: '', model: '' },
             };
             
             const ragContent = "The main security protocol is to always use HTTPS.";
