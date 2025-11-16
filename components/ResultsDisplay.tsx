@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import type { WorkflowState, WorkflowStatus, Artifact } from '../types';
 import { jsPDF } from 'jspdf';
-import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon, MapIcon, CogIcon } from './icons';
+import JSZip from 'jszip';
+import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon, MapIcon, CogIcon, DownloadAllIcon } from './icons';
 import { parseAndSanitizeMarkdown } from '../utils/markdown';
 
 /**
@@ -188,6 +189,8 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
                 mimeType = 'text/css;charset=utf-8';
                 break;
             case 'js':
+                 case 'ts':
+            case 'tsx':
                 mimeType = 'application/javascript;charset=utf-8';
                 break;
         }
@@ -197,6 +200,29 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
     const supportArtifacts = state.state.artifacts.filter(
         artifact => !['rag_results'].includes(artifact.key)
     );
+
+    const handleDownloadAllArtifacts = async () => {
+        if (supportArtifacts.length === 0) return;
+        
+        const zip = new JSZip();
+        supportArtifacts.forEach(artifact => {
+            zip.file(artifact.key, artifact.value);
+        });
+
+        try {
+            const blob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'workflow-artifacts.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Failed to create zip file", error);
+        }
+    };
     
     // FIX: Replaced `JSX.Element` with `React.ReactElement` to resolve namespace error.
     const agentIcons: { [key in 'Planner' | 'Worker' | 'QA']: React.ReactElement } = {
@@ -273,7 +299,18 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
                      
                     {activeTab === 'support' && (
                         <div className="animate-fade-in space-y-3">
-                            <h3 className="text-lg font-semibold text-text-secondary">Supporting Documents & Assets</h3>
+                             <div className="flex justify-between items-center">
+                                <h3 className="text-lg font-semibold text-text-secondary">Supporting Documents & Assets</h3>
+                                <button 
+                                    onClick={handleDownloadAllArtifacts} 
+                                    disabled={supportArtifacts.length === 0}
+                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md hover:bg-white/10 transition-colors border border-border-muted text-text-muted disabled:opacity-50" 
+                                    aria-label="Download all artifacts as zip"
+                                >
+                                    <DownloadAllIcon className="w-5 h-5" />
+                                    <span>Download All (.zip)</span>
+                                </button>
+                            </div>
                             <div className="max-h-96 overflow-y-auto space-y-2 pr-2">
                                 {supportArtifacts.map((artifact, index) => (
                                     <div key={index} className="flex items-center justify-between gap-3 p-3 bg-black/20 rounded-lg">
