@@ -16,7 +16,7 @@ import { PlanApprovalModal } from './components/PlanApprovalModal';
 
 
 const DEFAULT_SETTINGS: LLMSettings = {
-    provider: 'google',
+    provider: 'ollama',
     google: { model: 'gemini-2.5-flash' },
     openai: { apiKey: '', model: 'gpt-4o', baseURL: 'https://api.openai.com/v1' },
     claude: { apiKey: '', model: 'claude-3-opus-20240229', baseURL: 'https://api.anthropic.com/v1' },
