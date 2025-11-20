@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 import type { LLMSettings, WorkflowState, ProviderSettings } from "../types";
+import { googleRateLimiter } from "../utils/rateLimiter";
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
@@ -192,6 +193,10 @@ const _runGoogleWorkflow = async (currentState: WorkflowState, settings: Provide
     if (!GOOGLE_API_KEY) {
         throw new Error("Google API key is not set in environment variables.");
     }
+
+    // Rate limiting: Wait if needed to stay within 12 requests per minute
+    await googleRateLimiter.waitIfNeeded();
+
     const ai = new GoogleGenAI({ apiKey: GOOGLE_API_KEY });
 
     const prompt = getSystemPrompt(currentState, ragContent);
