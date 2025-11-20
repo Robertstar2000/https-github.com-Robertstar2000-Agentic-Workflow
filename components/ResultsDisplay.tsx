@@ -1,10 +1,9 @@
 
-
 import React, { useState } from 'react';
 import type { WorkflowState, WorkflowStatus, Artifact } from '../types';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
-import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon, MapIcon, CogIcon, DownloadAllIcon } from './icons';
+import { CheckCircleIcon, ExclamationIcon, SpinnerIcon, XCircleIcon, DownloadIcon, MapIcon, CogIcon, DownloadAllIcon, TerminalIcon, ClipboardListIcon } from './icons';
 import { parseAndSanitizeMarkdown } from '../utils/markdown';
 
 /**
@@ -117,26 +116,54 @@ const StatusIndicator: React.FC<{ status: WorkflowStatus }> = ({ status }) => {
     );
 };
 
+const AgentIcon: React.FC<{ agent: 'Planner' | 'Worker' | 'QA' }> = ({ agent }) => {
+    const icons = {
+        Planner: (
+            <div className="p-2 rounded-full bg-o-purple/10 border border-o-purple/20 flex items-center justify-center">
+                <MapIcon className="w-4 h-4 text-o-purple" />
+            </div>
+        ),
+        Worker: (
+            <div className="p-2 rounded-full bg-i-cyan/10 border border-i-cyan/20 flex items-center justify-center">
+                <TerminalIcon className="w-4 h-4 text-i-cyan" />
+            </div>
+        ),
+        QA: (
+            <div className="p-2 rounded-full bg-f-green/10 border border-f-green/20 flex items-center justify-center">
+                <ClipboardListIcon className="w-4 h-4 text-f-green" />
+            </div>
+        ),
+    };
+    return icons[agent] || icons['Planner'];
+};
 
-const AgentStatusPanel: React.FC<{ state: WorkflowState }> = ({ state }) => (
-    <div className="bg-card-bg border border-border-muted rounded-xl p-4 flex flex-wrap gap-4 justify-between items-center backdrop-blur-lg">
-        <div>
-            <p className="text-sm text-text-muted">Agent</p>
-            <p className="font-semibold text-text-primary">Workflow Agent</p>
+
+const AgentStatusPanel: React.FC<{ state: WorkflowState }> = ({ state }) => {
+    const currentAgent = state.runLog.length > 0 ? state.runLog[state.runLog.length - 1].agent : 'Planner';
+
+    return (
+        <div className="bg-card-bg border border-border-muted rounded-xl p-4 flex flex-wrap gap-4 justify-between items-center backdrop-blur-lg">
+            <div className="flex items-center gap-3">
+                <AgentIcon agent={currentAgent} />
+                <div>
+                    <p className="text-sm text-text-muted">Current Agent</p>
+                    <p className="font-semibold text-text-primary">{currentAgent}</p>
+                </div>
+            </div>
+            <div>
+                <p className="text-sm text-text-muted">Status</p>
+                <StatusIndicator status={state.status} />
+            </div>
+            <div>
+                <p className="text-sm text-text-muted">Iteration</p>
+                <p className="font-semibold text-text-primary">{state.currentIteration} / {state.maxIterations}</p>
+            </div>
+             <div className="w-full bg-slate-800 rounded-full h-2.5 mt-2 min-w-[100px] hidden sm:block">
+                <div className="bg-gradient-to-r from-primary-start to-primary-end h-2.5 rounded-full" style={{ width: `${(state.currentIteration / state.maxIterations) * 100}%` }}></div>
+            </div>
         </div>
-        <div>
-            <p className="text-sm text-text-muted">Status</p>
-            <StatusIndicator status={state.status} />
-        </div>
-        <div>
-            <p className="text-sm text-text-muted">Iteration</p>
-            <p className="font-semibold text-text-primary">{state.currentIteration} / {state.maxIterations}</p>
-        </div>
-         <div className="w-full bg-slate-800 rounded-full h-2.5 mt-2">
-            <div className="bg-gradient-to-r from-primary-start to-primary-end h-2.5 rounded-full" style={{ width: `${(state.currentIteration / state.maxIterations) * 100}%` }}></div>
-        </div>
-    </div>
-);
+    );
+};
 
 const ResultCard: React.FC<{ title: string; children: React.ReactNode; className?: string; actions?: React.ReactNode }> = ({ title, children, className = '', actions }) => (
     <div className={`bg-card-bg border border-border-muted rounded-xl p-4 backdrop-blur-lg shadow-lg ${className}`}>
@@ -191,7 +218,7 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
                 mimeType = 'text/css;charset=utf-8';
                 break;
             case 'js':
-                 case 'ts':
+            case 'ts':
             case 'tsx':
                 mimeType = 'application/javascript;charset=utf-8';
                 break;
@@ -239,24 +266,14 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
         }
     };
     
-    // FIX: Replaced `JSX.Element` with `React.ReactElement` to resolve namespace error.
-    const agentIcons: { [key in 'Planner' | 'Worker' | 'QA']: React.ReactElement } = {
-        Planner: <MapIcon className="w-5 h-5 text-o-purple" />,
-        Worker: <CogIcon className="w-5 h-5 text-i-cyan" />,
-        QA: <CheckCircleIcon className="w-5 h-5 text-f-green" />,
-    };
-    
     const TabButton: React.FC<{ tab: Tab, label: string }> = ({ tab, label }) => (
         <button
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors border-t border-l border-r ${
-                activeTab === tab 
-                ? 'bg-card-bg border-border-muted text-text-primary' 
-                : 'bg-transparent border-transparent text-text-muted hover:text-text-secondary'
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+                activeTab === tab
+                    ? 'bg-white/10 text-text-primary'
+                    : 'text-text-muted hover:text-text-secondary hover:bg-white/5'
             }`}
-            style={{ marginBottom: '-1px' }}
-            aria-selected={activeTab === tab}
-            role="tab"
         >
             {label}
         </button>
@@ -266,108 +283,120 @@ export const ResultsDisplay: React.FC<{ state: WorkflowState }> = ({ state }) =>
         <div className="space-y-6 animate-fade-in">
             <AgentStatusPanel state={state} />
 
-            <ResultCard 
-                title="User-facing summary"
-                actions={<DownloadButton onDownload={() => downloadFile(state.finalResultSummary || state.state.notes, 'summary.txt', 'text/plain')} />}
-            >
-                <p className="text-sm font-mono whitespace-pre-wrap text-text-muted">
-                    {state.finalResultSummary || state.state.notes || 'No summary available yet.'}
-                </p>
-            </ResultCard>
+            <div className="flex gap-2 border-b border-border-muted pb-1 overflow-x-auto">
+                <TabButton tab="result" label="Result" />
+                <TabButton tab="support" label="Support Artifacts" />
+                <TabButton tab="log" label="Run Log" />
+                <TabButton tab="json" label="JSON State" />
+            </div>
 
-            <div>
-                <div className="flex border-b border-border-muted" role="tablist">
-                    <TabButton tab="result" label="Result" />
-                    {supportArtifacts.length > 0 && (
-                         <TabButton tab="support" label={`Support (${supportArtifacts.length})`} />
-                    )}
-                    <TabButton tab="log" label={`Run Log (${state.runLog.length})`} />
-                    <TabButton tab="json" label="JSON State" />
-                </div>
-                
-                <div className="bg-card-bg border border-t-0 border-border-muted rounded-b-xl p-4 min-h-[300px]" role="tabpanel">
-                    {activeTab === 'result' && (
-                        <div className="animate-fade-in space-y-3">
-                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold text-text-secondary">Final Result</h3>
-                                {(state.finalResultMarkdown || state.status === 'completed') && (
-                                     <button onClick={handleDownloadResult} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md hover:bg-white/10 transition-colors border border-border-muted text-text-muted disabled:opacity-50" aria-label="Download result">
-                                        <DownloadIcon className="w-5 h-5" />
-                                        <span>{downloadButtonLabel}</span>
-                                    </button>
-                                )}
+            <div className="min-h-[400px]">
+                {activeTab === 'result' && (
+                    <ResultCard 
+                        title="Final Result" 
+                        actions={<button onClick={handleDownloadResult} className="flex items-center gap-2 text-sm text-primary-end hover:text-primary-start transition-colors"><DownloadIcon className="w-4 h-4" />{downloadButtonLabel}</button>}
+                    >
+                        {state.finalResultMarkdown ? (
+                            <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: parseAndSanitizeMarkdown(state.finalResultMarkdown) }} />
+                        ) : (
+                             <div className="flex flex-col items-center justify-center h-64 text-text-muted">
+                                <SpinnerIcon className="w-8 h-8 mb-4 animate-spin opacity-50" />
+                                <p>Workflow in progress...</p>
                             </div>
-                            {state.finalResultMarkdown ? (
-                                <div className="prose prose-invert prose-sm max-w-none text-text-secondary" dangerouslySetInnerHTML={{ __html: parseAndSanitizeMarkdown(state.finalResultMarkdown) }} />
-                            ) : (
-                                <p className="text-text-muted text-sm pt-4">The final result will be displayed here once the workflow is completed.</p>
-                            )}
-                        </div>
-                    )}
-                     
-                    {activeTab === 'support' && (
-                        <div className="animate-fade-in space-y-3">
-                             <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold text-text-secondary">Supporting Documents & Assets</h3>
-                                <button 
-                                    onClick={handleDownloadAllArtifacts} 
-                                    disabled={supportArtifacts.length === 0}
-                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md hover:bg-white/10 transition-colors border border-border-muted text-text-muted disabled:opacity-50" 
-                                    aria-label="Download all artifacts as zip"
-                                >
-                                    <DownloadAllIcon className="w-5 h-5" />
-                                    <span>Download All (.zip)</span>
-                                </button>
+                        )}
+                        {state.finalResultSummary && (
+                            <div className="mt-6 p-4 bg-white/5 rounded-lg border border-border-muted">
+                                <h4 className="text-sm font-semibold text-text-primary mb-2">Summary</h4>
+                                <p className="text-sm text-text-secondary">{state.finalResultSummary}</p>
                             </div>
-                            <div className="max-h-96 overflow-y-auto space-y-2 pr-2">
-                                {supportArtifacts.map((artifact, index) => (
-                                    <div key={index} className="flex items-center justify-between gap-3 p-3 bg-black/20 rounded-lg">
-                                        <p className="font-mono text-sm text-text-secondary break-all">{artifact.key}</p>
+                        )}
+                    </ResultCard>
+                )}
+
+                {activeTab === 'support' && (
+                    <ResultCard 
+                        title="Generated Artifacts"
+                         actions={supportArtifacts.length > 0 ? (
+                            <button onClick={handleDownloadAllArtifacts} className="flex items-center gap-2 text-sm text-primary-end hover:text-primary-start transition-colors">
+                                <DownloadAllIcon className="w-4 h-4" /> Download All (.zip)
+                            </button>
+                        ) : undefined}
+                    >
+                         {supportArtifacts.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {supportArtifacts.map((artifact, i) => (
+                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-border-muted group hover:border-primary-start/50 transition-colors">
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <div className="p-2 bg-slate-900 rounded-md">
+                                                {/* Simple extension icon logic */}
+                                                <span className="text-xs font-mono font-bold text-text-muted">
+                                                    {artifact.key.split('.').pop()?.toUpperCase() || 'FILE'}
+                                                </span>
+                                            </div>
+                                            <p className="font-medium text-sm text-text-primary truncate" title={artifact.key}>{artifact.key}</p>
+                                        </div>
                                         <DownloadButton onDownload={() => handleDownloadArtifact(artifact)} />
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    )}
+                        ) : (
+                            <p className="text-text-muted text-center py-12">No artifacts generated yet.</p>
+                        )}
+                    </ResultCard>
+                )}
 
-                    {activeTab === 'log' && (
-                        <div className="animate-fade-in space-y-3">
-                             <h3 className="text-lg font-semibold text-text-secondary">Execution Log</h3>
-                            <div className="max-h-96 overflow-y-auto space-y-3 pr-2">
-                                {state.runLog.length > 0 ? state.runLog.map((entry, index) => (
-                                    <div key={index} className="flex items-start gap-3 p-2 bg-black/20 rounded-lg">
-                                        <div className="flex-shrink-0 mt-1" aria-hidden="true">
-                                            {agentIcons[entry.agent]}
+                {activeTab === 'log' && (
+                    <ResultCard title="Execution Log">
+                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                             {state.runLog.length > 0 ? (
+                                [...state.runLog].reverse().map((entry, i) => (
+                                    <div key={i} className="flex gap-4 p-3 rounded-lg bg-white/5 border border-border-muted">
+                                        <div className="flex-shrink-0">
+                                            <AgentIcon agent={entry.agent} />
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-sm">
-                                                <span className="text-text-secondary">{entry.agent}</span>
-                                                <span className="text-text-muted font-normal"> (Iteration {entry.iteration})</span>
-                                            </p>
-                                            <p className="text-sm text-text-muted">{entry.summary}</p>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="font-bold text-sm text-text-primary">{entry.agent}</span>
+                                                <span className="text-xs text-text-muted">Iteration {entry.iteration}</span>
+                                            </div>
+                                            <p className="text-sm text-text-secondary">{entry.summary}</p>
                                         </div>
                                     </div>
-                                )) : (
-                                    <p className="text-text-muted text-sm pt-4">The execution log will appear here as the workflow runs.</p>
-                                )}
-                            </div>
+                                ))
+                            ) : (
+                                <p className="text-text-muted text-center py-12">Log is empty.</p>
+                            )}
                         </div>
-                    )}
+                    </ResultCard>
+                )}
 
-                     {activeTab === 'json' && (
-                        <div className="animate-fade-in space-y-3">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-lg font-semibold text-text-secondary">Full JSON State</h3>
-                                <DownloadButton onDownload={() => downloadFile(JSON.stringify(state, null, 2), 'workflow-state.json', 'application/json')} />
-                            </div>
-                             <div className="max-h-96 overflow-y-auto bg-black/50 p-2 rounded-md">
-                                <pre className="text-xs text-text-secondary whitespace-pre-wrap" aria-label="JSON state">
-                                    <code>{JSON.stringify(state, null, 2)}</code>
-                                </pre>
-                            </div>
+                {activeTab === 'json' && (
+                    <ResultCard 
+                        title="Full State (JSON)"
+                        actions={
+                            <button 
+                                onClick={() => downloadFile(JSON.stringify(state, null, 2), 'workflow-state.json', 'application/json')}
+                                className="flex items-center gap-2 text-sm text-primary-end hover:text-primary-start transition-colors"
+                            >
+                                <DownloadIcon className="w-4 h-4" /> Download JSON
+                            </button>
+                        }
+                    >
+                        <div className="relative">
+                             <pre className="bg-slate-950 p-4 rounded-lg overflow-x-auto text-xs font-mono text-green-400 border border-border-muted max-h-[600px]">
+                                {JSON.stringify(state, null, 2)}
+                            </pre>
+                            <button 
+                                onClick={() => {
+                                     navigator.clipboard.writeText(JSON.stringify(state, null, 2));
+                                }}
+                                className="absolute top-2 right-2 px-2 py-1 text-xs bg-white/10 hover:bg-white/20 rounded text-text-secondary transition-colors"
+                            >
+                                Copy
+                            </button>
                         </div>
-                    )}
-                </div>
+                    </ResultCard>
+                )}
             </div>
         </div>
     );
