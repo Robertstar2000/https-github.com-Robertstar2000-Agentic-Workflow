@@ -25,6 +25,7 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/workflow', workflowRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+const server = app.listen(Number(PORT), '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV}`);
 });
