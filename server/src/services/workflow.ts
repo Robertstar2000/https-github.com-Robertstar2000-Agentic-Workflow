@@ -96,6 +96,7 @@ For **Code/Project Creation**:
 - Use vanilla JavaScript or include CDN links for libraries (React, Vue, etc.) via script tags
 - Avoid Node.js-specific code or build tools unless absolutely necessary
 - The final step must include clear instructions: "Open index.html in a web browser to preview the application"
+- **Styling & Launch:** The \`index.html\` MUST include CSS styling (colors, fonts) to be visually appealing. It MUST also include a visible button labeled "Launch Application" (or similar) that effectively starts the experience or opens the main view.
 - Follow the standard workflow as described below
 
 For **Data/SQL Generation**:
@@ -152,7 +153,7 @@ For **Data/SQL Generation**:
             -   A "Getting Started" or "Usage" section with instructions. If \`resultType\` is "code", this means installation (\`npm install\`) and execution (\`npm run dev\`) commands. If \`resultType\` is "text", this means explaining the findings or how to read the report.
             -   A "Technical Details" or "Methodology" section if applicable, detailing architecture or dependencies.
         3.  **Update State:** Add the new \`README.md\` artifact to the \`artifacts\` array.
-        4.  **Set Final Outputs:** Set the \`finalResultMarkdown\` field to the **exact same content** as the \`README.md\` artifact. Generate a brief, user-friendly summary of the project's outcome and put it in the \`finalResultSummary\` field.
+        4.  **Set Final Outputs:** Set the \`finalResultMarkdown\` field to the **exact same content** as the \`README.md\` artifact. Generate a brief, user-friendly summary of the project's outcome and put it in the \`finalResultSummary\` field. **CRITICAL:** For information queries or text-based requests, this summary MUST include the **actual key findings/answers** (e.g., "The weather is 72°F", "The stock price is $150"), not just "I have created a report."
         5.  **Set Status:** Finally, set the \`status\` to "completed".
 
 **Final Output Structure:**
@@ -196,9 +197,9 @@ const responseSchema = {
             type: Type.OBJECT,
             properties: {
                 goal: { type: Type.STRING },
-                steps: { 
-                    type: Type.ARRAY, 
-                    items: { 
+                steps: {
+                    type: Type.ARRAY,
+                    items: {
                         type: Type.OBJECT,
                         properties: {
                             description: { type: Type.STRING },
@@ -206,11 +207,11 @@ const responseSchema = {
                             completed: { type: Type.BOOLEAN }
                         },
                         required: ['description', 'agentType']
-                    } 
+                    }
                 },
-                initialPlan: { 
-                    type: Type.ARRAY, 
-                    items: { 
+                initialPlan: {
+                    type: Type.ARRAY,
+                    items: {
                         type: Type.OBJECT,
                         properties: {
                             description: { type: Type.STRING },
@@ -218,7 +219,7 @@ const responseSchema = {
                             completed: { type: Type.BOOLEAN }
                         },
                         required: ['description', 'agentType']
-                    } 
+                    }
                 },
                 artifacts: {
                     type: Type.ARRAY,
